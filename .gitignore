@@ -4,6 +4,9 @@
 *.xcuserdata/
 *.xcworkspace/xcuserdata/
 
+# Spec (kept locally, not tracked)
+SPEC.md
+
 # macOS
 .DS_Store
 *.swp

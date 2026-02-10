@@ -1,5 +1,7 @@
 # iOS Release Platform
 
+> **[日本語版はこちら (README_ja.md)](README_ja.md)**
+
 A GitHub Template that generates a **compilable Xcode project** and a **production-ready release pipeline** from environment variables alone.
 
 Clone it, fill in `.env`, run one command — your app builds in CI with signed certificates and deploys to TestFlight.

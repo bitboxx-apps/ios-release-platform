@@ -1,0 +1,51 @@
+# IDE
+.idea/
+*.iml
+*.xcuserdata/
+*.xcworkspace/xcuserdata/
+
+# macOS
+.DS_Store
+*.swp
+*~
+
+# Environment (secrets)
+.env.platform
+# NOTE: .env.app is committed (contains no secrets — only app identity like APP_NAME, APP_BUNDLE_ID)
+.env.local
+
+# Signing keys
+*.p8
+*.p12
+*.cer
+*.mobileprovision
+
+# Ruby
+vendor/bundle/
+.bundle/
+Gemfile.lock
+
+# Fastlane
+release/platform/fastlane/report.xml
+release/platform/fastlane/README.md
+release/platform/fastlane/screenshots/
+release/platform/fastlane/test_output/
+
+# Build artifacts
+build/
+DerivedData/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Xcode
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+xcuserdata/
+*.moved-aside
+*.hmap
+*.ipa
+*.xccheckout
+*.xcscmblueprint

@@ -1,0 +1,5 @@
+git_url("${MATCH_GIT_URL}")
+storage_mode("${MATCH_STORAGE_MODE:-git}")
+type("${MATCH_TYPE}")
+app_identifier("${APP_BUNDLE_ID}")
+readonly(true)

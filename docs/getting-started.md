@@ -45,7 +45,7 @@ Edit `.env.app` with your app identity:
 ### 3. Run bootstrap
 
 ```bash
-./release/bootstrap/bootstrap.sh --init
+CI=1 FASTLANE_SKIP_UPDATE_CHECK=1 ./release/bootstrap/bootstrap.sh --init
 ```
 
 This will:
@@ -80,3 +80,17 @@ Windows supports secret provisioning and configuration only:
 ```
 
 iOS build operations require macOS.
+
+## Troubleshooting
+
+- `Repository not found` when cloning the match repo:
+  - Confirm `MATCH_GIT_URL` is correct and the repository exists.
+  - If you use a GitHub deploy key, set `MATCH_GIT_PRIVATE_KEY_PATH` so match uses the intended SSH key.
+
+- `No code signing identity found and cannot create a new one because you enabled readonly`:
+  - You are running match in readonly mode before any certificates exist.
+  - Run `./release/bootstrap/bootstrap.sh --init` (or `release/scripts/setup_match.sh false true`) once to generate them.
+
+- `Access forbidden` from the Apple Developer Portal:
+  - Confirm your Apple Developer Program role has access to Certificates/Identifiers/Profiles.
+  - If you belong to multiple teams, set `APPLE_ID` in `.env.local` and ensure `APPLE_TEAM_ID` is correct.

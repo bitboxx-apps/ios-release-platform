@@ -11,6 +11,10 @@ SCRIPTS_DIR="${REPO_ROOT}/release/scripts"
 
 source "${SCRIPTS_DIR}/ensure_idempotency.sh"
 
+# fastlane can hang while checking for updates; make bootstrap non-interactive.
+export CI=1
+export FASTLANE_SKIP_UPDATE_CHECK=1
+
 # ---------- Parse Arguments ----------
 
 INIT_MODE=false

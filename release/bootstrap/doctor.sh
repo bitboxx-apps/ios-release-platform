@@ -22,7 +22,12 @@ check_required() {
 
     if command_exists "$cmd"; then
         local version
-        version=$("$cmd" --version 2>/dev/null | head -1 || echo "installed")
+        # fastlane can hang while checking for updates in some environments.
+        if [[ "$cmd" == "fastlane" ]]; then
+            version=$(CI=1 FASTLANE_SKIP_UPDATE_CHECK=1 fastlane --version 2>/dev/null | head -1 || echo "installed")
+        else
+            version=$("$cmd" --version 2>/dev/null | head -1 || echo "installed")
+        fi
         log_ok "${label}: ${version}"
     else
         log_fail "${label}: NOT FOUND"

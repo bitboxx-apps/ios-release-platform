@@ -9,7 +9,7 @@ source "${SCRIPT_DIR}/ensure_idempotency.sh"
 log_step "Checking fastlane installation"
 
 if command_exists "fastlane"; then
-    FASTLANE_VERSION=$(fastlane --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown")
+    FASTLANE_VERSION=$(CI=1 FASTLANE_SKIP_UPDATE_CHECK=1 fastlane --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown")
     log_ok "fastlane ${FASTLANE_VERSION} already installed"
     exit 0
 fi
@@ -28,7 +28,7 @@ else
 fi
 
 if command_exists "fastlane"; then
-    FASTLANE_VERSION=$(fastlane --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown")
+    FASTLANE_VERSION=$(CI=1 FASTLANE_SKIP_UPDATE_CHECK=1 fastlane --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown")
     log_ok "fastlane ${FASTLANE_VERSION} installed successfully"
 else
     log_fail "fastlane installation failed"

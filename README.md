@@ -208,6 +208,7 @@ Configuration uses a three-layer system. Each layer overrides the previous:
 | `ASC_KEY_ID` | App Store Connect API Key ID | — |
 | `ASC_ISSUER_ID` | App Store Connect Issuer ID | — |
 | `ASC_KEY_PATH` | Local path to `.p8` key file | — |
+| `APPLE_ID` | Apple ID email used by fastlane/match for Apple Developer Portal access (recommended in .env.local) | — |
 | `MATCH_GIT_PRIVATE_KEY_PATH` | Local path to SSH key for match repo | — |
 
 `APP_SCHEME` and `XCODE_PROJECT_PATH` are automatically derived from `APP_NAME`.

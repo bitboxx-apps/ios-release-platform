@@ -78,6 +78,8 @@ load_env_file() {
     local env_file="$1"
     if file_exists "$env_file"; then
         while IFS= read -r line || [[ -n "$line" ]]; do
+            # Normalize CRLF input from editors/CI copies.
+            line="${line%$'\r'}"
             # Skip comments and empty lines
             [[ "$line" =~ ^[[:space:]]*# ]] && continue
             [[ -z "${line// /}" ]] && continue

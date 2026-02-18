@@ -1,5 +1,117 @@
 default_platform(:ios)
 
+def sanitize_env_scalar(value)
+  v = (value || "").to_s.strip.gsub("\r", "")
+  if (v.start_with?('"') && v.end_with?('"')) || (v.start_with?("'") && v.end_with?("'"))
+    v = v[1..-2]
+  end
+  v.strip
+end
+
+def asc_api_key_from_env(force_individual: nil)
+  raw_key_content = sanitize_env_scalar(ENV["ASC_KEY_CONTENT"])
+  UI.user_error!("ASC_KEY_CONTENT is empty") if raw_key_content.empty?
+
+  key_id = sanitize_env_scalar(ENV["ASC_KEY_ID"])
+  issuer_id = sanitize_env_scalar(ENV["ASC_ISSUER_ID"])
+  key_path_ci = sanitize_env_scalar(ENV["ASC_KEY_PATH_CI"])
+  env_individual = sanitize_env_scalar(ENV["ASC_INDIVIDUAL_KEY"]).downcase == "true"
+  is_individual_key = force_individual.nil? ? env_individual : force_individual
+  duration = (ENV["ASC_API_KEY_DURATION"] || "1200").to_i
+
+  UI.user_error!("ASC_KEY_ID is empty") if key_id.empty?
+  UI.user_error!("ASC_ISSUER_ID is empty (unless ASC_INDIVIDUAL_KEY=true)") if issuer_id.empty? && !is_individual_key
+  UI.user_error!("ASC_API_KEY_DURATION must be between 1 and 1200") unless duration.between?(1, 1200)
+  issuer_for_fastlane = is_individual_key ? nil : issuer_id
+
+  if !key_path_ci.empty? && File.exist?(key_path_ci)
+    return app_store_connect_api_key(
+      key_id: key_id,
+      issuer_id: issuer_for_fastlane,
+      key_filepath: key_path_ci,
+      duration: duration
+    )
+  end
+
+  pem_candidate = raw_key_content.gsub("\\n", "\n").gsub("\\r", "")
+
+  begin
+    return app_store_connect_api_key(
+      key_id: key_id,
+      issuer_id: issuer_for_fastlane,
+      key_content: pem_candidate,
+      is_key_content_base64: false,
+      duration: duration
+    )
+  rescue => first_error
+    begin
+      return app_store_connect_api_key(
+        key_id: key_id,
+        issuer_id: issuer_for_fastlane,
+        key_content: raw_key_content,
+        is_key_content_base64: true,
+        duration: duration
+      )
+    rescue => second_error
+      UI.user_error!(
+        "ASC_KEY_CONTENT format is invalid. " \
+        "Expected raw .p8 PEM (with real newlines or \\\\n) or base64-encoded .p8. " \
+        "raw_pem_error=#{first_error.class}: #{first_error.message} / " \
+        "base64_error=#{second_error.class}: #{second_error.message}"
+      )
+    end
+  end
+end
+
+def verify_asc_connection!(api_key)
+  require "spaceship"
+  token_params = api_key.transform_keys(&:to_sym)
+  Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.create(**token_params)
+  Spaceship::ConnectAPI::App.all(limit: 1)
+  api_key
+rescue => error
+  if error.is_a?(Spaceship::UnauthorizedAccessError) && sanitize_env_scalar(ENV["ASC_INDIVIDUAL_KEY"]).downcase != "true"
+    begin
+      fallback_key = asc_api_key_from_env(force_individual: true)
+      fallback_params = fallback_key.transform_keys(&:to_sym)
+      Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.create(**fallback_params)
+      Spaceship::ConnectAPI::App.all(limit: 1)
+      UI.important("ASC auth fallback succeeded with issuer_id=nil. Set ASC_INDIVIDUAL_KEY=true in secrets.")
+      return fallback_key
+    rescue
+      # Fall through to the original error message below.
+    end
+  end
+  key_id = sanitize_env_scalar(ENV["ASC_KEY_ID"])
+  issuer_id = sanitize_env_scalar(ENV["ASC_ISSUER_ID"])
+  individual = sanitize_env_scalar(ENV["ASC_INDIVIDUAL_KEY"]).downcase == "true"
+  UI.user_error!(
+    "App Store Connect authentication failed. " \
+    "Check ASC_KEY_ID / ASC_ISSUER_ID / ASC_KEY_CONTENT pairing and key permissions. " \
+    "ASC_KEY_ID=#{key_id.inspect}, ASC_ISSUER_ID=#{issuer_id.inspect}, ASC_INDIVIDUAL_KEY=#{individual}. " \
+    "#{error.class}: #{error.message}"
+  )
+end
+
+def project_path_for_ci
+  path = (ENV["XCODE_PROJECT_PATH"] || "").strip
+  return "../../app/__APP_NAME__.xcodeproj" if path.empty?
+  return path if path.start_with?("/")
+  workspace = (ENV["GITHUB_WORKSPACE"] || "").strip
+  if !workspace.empty?
+    return File.join(workspace, path)
+  end
+  File.expand_path(File.join("..", "..", path), __dir__)
+end
+
+def export_options_for_match
+  mapping = lane_context[SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING] || {}
+  {
+    signingStyle: "manual",
+    provisioningProfiles: mapping
+  }
+end
+
 platform :ios do
   before_all do
     ENV["FASTLANE_SKIP_CONFIRMATION"] = "1"
@@ -7,12 +119,8 @@ platform :ios do
 
   desc "Sync certificates and profiles (readonly)"
   lane :sync_certificates do
-    api_key = app_store_connect_api_key(
-      key_id: ENV["ASC_KEY_ID"],
-      issuer_id: ENV["ASC_ISSUER_ID"],
-      key_content: ENV["ASC_KEY_CONTENT"],
-      is_key_content_base64: true
-    )
+    api_key = asc_api_key_from_env
+    api_key = verify_asc_connection!(api_key)
 
     match(
       type: "${MATCH_TYPE}",
@@ -26,28 +134,26 @@ platform :ios do
   lane :beta do
     setup_ci
 
-    api_key = app_store_connect_api_key(
-      key_id: ENV["ASC_KEY_ID"],
-      issuer_id: ENV["ASC_ISSUER_ID"],
-      key_content: ENV["ASC_KEY_CONTENT"],
-      is_key_content_base64: true
-    )
+    api_key = asc_api_key_from_env
+    api_key = verify_asc_connection!(api_key)
 
     match(type: "appstore", readonly: true, api_key: api_key)
 
     # Build number: CI run number + offset to avoid conflicts
     run_number = (ENV["GITHUB_RUN_NUMBER"] || "1").to_i
     build_number = run_number + 1000
-    increment_build_number(build_number: build_number)
+    increment_build_number(
+      xcodeproj: project_path_for_ci,
+      build_number: build_number
+    )
 
     build_app(
-      project: "${XCODE_PROJECT_PATH}",
+      project: project_path_for_ci,
       scheme: "${APP_SCHEME}",
+      configuration: "Release",
       clean: true,
       export_method: "app-store",
-      export_options: {
-        signingStyle: "manual"
-      },
+      export_options: export_options_for_match,
       output_directory: "./build",
       output_name: "${APP_NAME}.ipa"
     )
@@ -61,7 +167,7 @@ platform :ios do
   desc "Run tests"
   lane :test do
     run_tests(
-      project: "${XCODE_PROJECT_PATH}",
+      project: project_path_for_ci,
       scheme: "${APP_SCHEME}",
       clean: true,
       device: "iPhone 16"
@@ -72,27 +178,25 @@ platform :ios do
   lane :release do
     setup_ci
 
-    api_key = app_store_connect_api_key(
-      key_id: ENV["ASC_KEY_ID"],
-      issuer_id: ENV["ASC_ISSUER_ID"],
-      key_content: ENV["ASC_KEY_CONTENT"],
-      is_key_content_base64: true
-    )
+    api_key = asc_api_key_from_env
+    api_key = verify_asc_connection!(api_key)
 
     match(type: "appstore", readonly: true, api_key: api_key)
 
     run_number = (ENV["GITHUB_RUN_NUMBER"] || "1").to_i
     build_number = run_number + 1000
-    increment_build_number(build_number: build_number)
+    increment_build_number(
+      xcodeproj: project_path_for_ci,
+      build_number: build_number
+    )
 
     build_app(
-      project: "${XCODE_PROJECT_PATH}",
+      project: project_path_for_ci,
       scheme: "${APP_SCHEME}",
+      configuration: "Release",
       clean: true,
       export_method: "app-store",
-      export_options: {
-        signingStyle: "manual"
-      },
+      export_options: export_options_for_match,
       output_directory: "./build",
       output_name: "${APP_NAME}.ipa"
     )

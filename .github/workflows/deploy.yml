@@ -26,11 +26,37 @@ jobs:
               [[ -z "${line// /}" ]] && continue
               if [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
                 echo "$line" >> "$GITHUB_ENV"
+                eval "export $line"
               fi
             done < .env.app
           fi
+          if [ -z "${APP_NAME:-}" ]; then
+            echo "APP_NAME is empty. Ensure .env.app contains APP_NAME=..."
+            exit 1
+          fi
           echo "APP_SCHEME=${APP_NAME}" >> "$GITHUB_ENV"
           echo "XCODE_PROJECT_PATH=app/${APP_NAME}.xcodeproj" >> "$GITHUB_ENV"
+
+      - name: Resolve ASC env (secrets override .env.app)
+        env:
+          ASC_KEY_ID_SECRET: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID_SECRET: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_CONTENT_SECRET: ${{ secrets.ASC_KEY_CONTENT }}
+          ASC_INDIVIDUAL_KEY_SECRET: ${{ secrets.ASC_INDIVIDUAL_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -n "${ASC_KEY_ID_SECRET:-}" ]; then
+            echo "ASC_KEY_ID=${ASC_KEY_ID_SECRET}" >> "$GITHUB_ENV"
+          fi
+          if [ -n "${ASC_ISSUER_ID_SECRET:-}" ]; then
+            echo "ASC_ISSUER_ID=${ASC_ISSUER_ID_SECRET}" >> "$GITHUB_ENV"
+          fi
+          if [ -n "${ASC_KEY_CONTENT_SECRET:-}" ]; then
+            echo "ASC_KEY_CONTENT=${ASC_KEY_CONTENT_SECRET}" >> "$GITHUB_ENV"
+          fi
+          if [ -n "${ASC_INDIVIDUAL_KEY_SECRET:-}" ]; then
+            echo "ASC_INDIVIDUAL_KEY=${ASC_INDIVIDUAL_KEY_SECRET}" >> "$GITHUB_ENV"
+          fi
 
       - name: Set up Xcode
         uses: maxim-lobanov/setup-xcode@v1
@@ -59,12 +85,43 @@ jobs:
           restore-keys: |
             spm-${{ runner.os }}-
 
+      - name: CI preflight (required secrets)
+        env:
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_PRIVATE_KEY: ${{ secrets.MATCH_GIT_PRIVATE_KEY }}
+        run: |
+          test -n "${ASC_KEY_ID:-}" || (echo "ASC_KEY_ID is empty" && exit 1)
+          test -n "${ASC_ISSUER_ID:-}" || (echo "ASC_ISSUER_ID is empty" && exit 1)
+          test -n "${ASC_KEY_CONTENT:-}" || (echo "ASC_KEY_CONTENT is empty" && exit 1)
+          test -n "${MATCH_PASSWORD:-}" || (echo "MATCH_PASSWORD is empty" && exit 1)
+          test -n "${MATCH_GIT_PRIVATE_KEY:-}" || (echo "MATCH_GIT_PRIVATE_KEY is empty" && exit 1)
+
+      - name: Prepare ASC key file
+        run: |
+          set -euo pipefail
+          asc_key_path="$RUNNER_TEMP/asc_key.p8"
+          echo "ASC_KEY_PATH_CI=$asc_key_path" >> "$GITHUB_ENV"
+          export ASC_KEY_PATH_CI="$asc_key_path"
+          python3 release/scripts/asc_key_prepare.py
+
       - name: Deploy to TestFlight
         env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_PRIVATE_KEY: ${{ secrets.MATCH_GIT_PRIVATE_KEY }}
         working-directory: release/platform
         run: bundle exec fastlane beta
+
+      - name: Dump gym/xcode logs on failure
+        if: failure()
+        run: |
+          echo "=== Keychain identities ==="
+          security find-identity -v -p codesigning ~/Library/Keychains/fastlane_tmp_keychain-db || true
+          security find-identity -v -p codesigning ~/Library/Keychains/login.keychain-db || true
+
+          echo "=== gym logs ==="
+          ls -la ~/Library/Logs/gym || true
+          for f in ~/Library/Logs/gym/*.log; do
+            echo "---- $f ----"
+            grep -En "error:|warning:|Provisioning|CodeSign|No signing certificate|No profiles|requires a provisioning profile" "$f" || true
+            tail -n 200 "$f" || true
+          done

@@ -18,13 +18,16 @@ export FASTLANE_SKIP_UPDATE_CHECK=1
 # ---------- Parse Arguments ----------
 
 INIT_MODE=false
+FORCE_SECRETS=false
 for arg in "$@"; do
     case "$arg" in
         --init) INIT_MODE=true ;;
+        --force-secrets) FORCE_SECRETS=true ;;
         --help|-h)
-            echo "Usage: bootstrap.sh [--init]"
+            echo "Usage: bootstrap.sh [--init] [--force-secrets]"
             echo ""
             echo "  --init    First-time initialization (generates Xcode project, creates certs, provisions secrets)"
+            echo "  --force-secrets  Overwrite existing GitHub secrets when provisioning"
             echo "  (default) Normal mode: validates env, syncs match readonly, verifies readiness"
             exit 0
             ;;
@@ -117,7 +120,11 @@ if $INIT_MODE; then
 
     # Step 8: Provision GitHub secrets
     log_step "Provisioning GitHub secrets"
-    bash "${SCRIPTS_DIR}/setup_secrets.sh"
+    if $FORCE_SECRETS; then
+        bash "${SCRIPTS_DIR}/setup_secrets.sh" --force
+    else
+        bash "${SCRIPTS_DIR}/setup_secrets.sh"
+    fi
 
     # Step 9: Verify signing access
     log_step "Verifying signing access (readonly match)"

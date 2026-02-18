@@ -28,8 +28,13 @@ jobs:
               [[ -z "${line// /}" ]] && continue
               if [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
                 echo "$line" >> "$GITHUB_ENV"
+                eval "export $line"
               fi
             done < .env.app
+          fi
+          if [ -z "${APP_NAME:-}" ]; then
+            echo "APP_NAME is empty. Ensure .env.app contains APP_NAME=..."
+            exit 1
           fi
           # Derive values
           echo "APP_SCHEME=${APP_NAME}" >> "$GITHUB_ENV"

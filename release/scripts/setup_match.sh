@@ -63,26 +63,31 @@ else
     log_ok "Matchfile already exists — skipping generation"
 fi
 
+run_match_command() {
+    local readonly_value="$1"
+    cd "$FASTLANE_DIR/.."
+    local match_cmd=(
+        bundle exec fastlane match "$MATCH_TYPE"
+        --git_url "$MATCH_GIT_URL"
+        --app_identifier "$APP_BUNDLE_ID"
+        --team_id "$APPLE_TEAM_ID"
+    )
+    if [[ -n "${APPLE_ID:-}" ]]; then
+        match_cmd+=(--username "$APPLE_ID")
+    fi
+    if (( ${#GIT_PRIVATE_KEY_ARGS[@]} )); then
+        match_cmd+=("${GIT_PRIVATE_KEY_ARGS[@]}")
+    fi
+    match_cmd+=(--readonly "$readonly_value")
+    "${match_cmd[@]}"
+}
+
 if [[ "$INIT_MODE" == "true" ]]; then
     log_step "Running match in init mode (generating certificates)"
-    cd "$FASTLANE_DIR/.."
-    bundle exec fastlane match "$MATCH_TYPE" \
-        --git_url "$MATCH_GIT_URL" \
-        --app_identifier "$APP_BUNDLE_ID" \
-        --team_id "$APPLE_TEAM_ID" \
-        ${APPLE_ID:+--username "$APPLE_ID"} \
-        "${GIT_PRIVATE_KEY_ARGS[@]}" \
-        --readonly false
+    run_match_command false
     log_ok "Match certificates generated"
 else
     log_step "Running match in readonly mode"
-    cd "$FASTLANE_DIR/.."
-    bundle exec fastlane match "$MATCH_TYPE" \
-        --git_url "$MATCH_GIT_URL" \
-        --app_identifier "$APP_BUNDLE_ID" \
-        --team_id "$APPLE_TEAM_ID" \
-        ${APPLE_ID:+--username "$APPLE_ID"} \
-        "${GIT_PRIVATE_KEY_ARGS[@]}" \
-        --readonly true
+    run_match_command true
     log_ok "Match readonly sync complete"
 fi

@@ -156,6 +156,21 @@ if ($Init) {
             Log-Ok "ASC_ISSUER_ID provisioned"
         }
     }
+
+    $ascKeyPath = [System.Environment]::GetEnvironmentVariable("ASC_KEY_PATH", "Process")
+    if ($ascKeyPath) {
+        if (-not (Test-Path $ascKeyPath)) {
+            Log-Fail "ASC_KEY_PATH not found: $ascKeyPath"
+            exit 1
+        }
+        $existing = gh secret list --repo $repo 2>$null | Select-String "^ASC_KEY_CONTENT\s"
+        if (-not $existing) {
+            $keyBytes = [System.IO.File]::ReadAllBytes($ascKeyPath)
+            $keyContent = [System.Convert]::ToBase64String($keyBytes)
+            $keyContent | gh secret set "ASC_KEY_CONTENT" --repo $repo --body -
+            Log-Ok "ASC_KEY_CONTENT provisioned (base64)"
+        }
+    }
 } else {
     # Normal mode: verify secrets exist
     Log-Step "Verifying GitHub secrets"

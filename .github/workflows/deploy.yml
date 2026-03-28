@@ -103,6 +103,19 @@ jobs:
           echo "ASC_KEY_PATH_CI=$asc_key_path" >> "$GITHUB_ENV"
           export ASC_KEY_PATH_CI="$asc_key_path"
           python3 release/scripts/asc_key_prepare.py
+          openssl pkey -in "$asc_key_path" -pubout 2>/dev/null | openssl sha256
+
+      - name: ASC key debug (safe)
+        run: |
+          set -euo pipefail
+          echo "EVENT=${GITHUB_EVENT_NAME}"
+          echo "REF=${GITHUB_REF}"
+          echo "REPO=${GITHUB_REPOSITORY}"
+          echo "ASC_KEY_ID_LAST4=${ASC_KEY_ID: -4}"
+          echo "ASC_ISSUER_ID_LAST4=${ASC_ISSUER_ID: -4}"
+          echo "ASC_KEY_CONTENT_LEN=${#ASC_KEY_CONTENT}"
+          if [ -z "${ASC_KEY_ID:-}" ]; then echo "ASC_KEY_ID_EMPTY=1"; fi
+          if [ -z "${ASC_ISSUER_ID:-}" ]; then echo "ASC_ISSUER_ID_EMPTY=1"; fi
 
       - name: Deploy to TestFlight
         env:

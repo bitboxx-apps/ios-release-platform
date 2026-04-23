@@ -170,4 +170,8 @@ echo "  Mode:         $(if $INIT_MODE; then echo 'INIT'; else echo 'NORMAL'; fi)
 echo ""
 echo "  Open your project:"
 echo "    open app/${APP_NAME}.xcodeproj"
+echo ""
+echo "  Local deploy (CI 相当ビルド & TestFlight アップロード):"
+echo "    ./release/scripts/deploy.sh            # beta lane"
+echo "    ./release/scripts/deploy.sh release    # App Store lane"
 echo "============================================"

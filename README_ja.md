@@ -34,93 +34,67 @@ iOS アプリを App Store に出すには、Xcode の署名設定、証明書�
 
 ## クイックスタート
 
-### 1. リポジトリを作成
+### あなたが手でやることは1つだけ
 
-GitHub で **"Use this template"** をクリックして新しいリポジトリを作成します。
+[App Store Connect](https://appstoreconnect.apple.com/) で **API キーを払い出して 5 つのことをする** だけ:
 
-### 2. 環境をチェック
+1. **Users and Access → Integrations → App Store Connect API → Team Keys** で `+` → Role: **Admin** で発行
+2. `AuthKey_XXXXXXXXXX.p8` をダウンロード(ローカルに保存)
+3. 控える: **Key ID**(10文字英数字)、**Issuer ID**(UUID)
+4. **Membership** ページから **Team ID**(10文字英数字)
+5. Developer Portal で **Bundle ID** を Explicit 登録 + App Store Connect で **App レコード**を作成
 
-```bash
-./release/bootstrap/doctor.sh
-```
-
-```
-[OK] Git: git version 2.43.0
-[OK] GitHub CLI: gh version 2.40.0
-[OK] Ruby: 3.3.0
-[OK] Bundler: 2.5.3
-[OK] fastlane: 2.219.0
-[OK] Xcode: Xcode 15.2
-[OK] All checks passed. Environment is ready.
-```
-
-Doctor は前提条件を検証しますが、インストールは行いません。
-
-### 3. 設定
-
-```bash
-cp .env.platform.example .env.platform
-cp .env.app.example      .env.app
-```
-
-**`.env.platform`** — 組織レベルの秘密情報:
-```
-APPLE_TEAM_ID=A1B2C3D4E5
-MATCH_GIT_URL=git@github.com:your-org/ios-signing.git
-MATCH_PASSWORD=your-encryption-passphrase
-```
-
-**`.env.app`** — アプリの識別情報:
-```
-APP_NAME=MyApp
-APP_DISPLAY_NAME=My App
-APP_BUNDLE_ID=com.company.myapp
-MATCH_TYPE=appstore
-ASC_KEY_ID=XXXXXXXXXX
-ASC_ISSUER_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-ASC_KEY_PATH=~/keys/AuthKey_XXXXXXXXXX.p8
-MATCH_GIT_PRIVATE_KEY_PATH=~/.ssh/match_key
-```
-
-`APP_NAME` は Xcode の識別子（スペース不可）。`APP_DISPLAY_NAME` は iOS ホーム画面に表示される名前（スペース・日本語・絵文字 OK）。
-
-### 4. Bootstrap
+### 残り全部はワンコマンド
 
 ```bash
 ./release/bootstrap/bootstrap.sh --init
 ```
 
-このコマンド1つで:
+対話 wizard が立ち上がるので、上の 4 値を入力するだけ。
 
-1. JSON Schema に対して設定をバリデーション
-2. **Xcode プロジェクトを生成** (`app/MyApp.xcodeproj`) — バンドルID、チーム、表示名、手動署名が設定済み
-3. Ruby >= 3.2 と fastlane を検証
-4. テンプレートから fastlane 設定を生成
-5. match で署名証明書を生成
-6. GitHub Secrets をプロビジョニング（ASC キーは base64 エンコード、match 用 SSH キー）
+| 入力 | 内容 |
+|---|---|
+| `ASC_KEY_ID` / `ASC_ISSUER_ID` / `ASC_KEY_PATH` | 発行した API キー |
+| `APPLE_TEAM_ID` | Membership ページの Team ID |
+| Bundle ID | **`1) 維持` / `2) 自動生成` / `3) 手動入力`** から選ぶ |
+| Match 署名リポジトリ | **`1) デフォルト名で自動作成` / `2) 既存 URL` / `3) 指定名で自動作成`** から選ぶ |
 
-### 5. 開発開始
+wizard が以下を自動で行います:
 
-```bash
-open app/MyApp.xcodeproj
-```
+- **署名用プライベートリポジトリ**を `gh repo create` で作成(or 既存を再利用)
+- **SSH デプロイキー**を生成し、signing repo の Deploy keys に登録
+- **MATCH_PASSWORD** を `openssl rand` で生成(signing repo が既存内容を持つ場合は既存パスを入力プロンプト)
+- `.env.local` に上記をすべて保存
+- 続けて bootstrap.sh が:
+  - Xcode プロジェクトの Team ID / Bundle ID / Manual 署名を解決
+  - `fastlane match` で証明書とプロビジョニングプロファイル生成 → signing repo に push
+  - GitHub Secrets を `gh secret set` で投入
+  - Fastfile / Appfile / Matchfile を生成
 
-プロジェクトは準備完了 — バンドルID、チーム、表示名、署名はすべて設定済み。アプリの開発を始めてください。
-
-### 6. コミット & デプロイ
+### コミット & デプロイ
 
 ```bash
 git add .env.app app/ release/platform/fastlane/
-git commit -m "Initialize project"
+git commit -m "Initialize release infrastructure"
 git push origin main
 ```
 
-バージョンタグで TestFlight デプロイを起動:
+push と同時に `.github/workflows/deploy.yml` が走り、約 6〜10 分で TestFlight の Processing 状態まで自動で進みます。
+
+`v*` タグでも別途デプロイをキックできます:
 
 ```bash
 git tag v1.0.0
 git push origin v1.0.0
 ```
+
+### 環境チェック(任意)
+
+```bash
+./release/bootstrap/doctor.sh
+```
+
+Doctor は前提条件を検証しますが、インストールは行いません。
 
 ---
 
@@ -256,19 +230,27 @@ git push origin v1.2.0
 
 ### Init モード (`--init`)
 
-リポジトリごとに1回実行:
+リポジトリごとに1回実行(対話 wizard あり):
 
 ```
 bootstrap.sh --init
+  ├── 対話 wizard (auto_provision.sh)
+  │     ├── ASC API キー入力 (Key ID / Issuer ID / .p8 パス)
+  │     ├── Apple Team ID 入力
+  │     ├── Bundle ID — 維持 / 自動生成 / 手動入力 を選択
+  │     ├── 署名リポジトリ — デフォルト名で自動作成 / 既存 URL / 指定名で自動作成 を選択
+  │     ├── SSH デプロイキー — 自動生成 + 公開鍵を Deploy keys に登録
+  │     └── MATCH_PASSWORD — 自動生成(repo 既存内容ありの場合は既存パスを要求)
   ├── env をスキーマに対してバリデーション
-  ├── テンプレートから Xcode プロジェクト生成 (app/<APP_NAME>.xcodeproj)
+  ├── テンプレートから Xcode プロジェクト生成 / pbxproj 内のプレースホルダを解決
   ├── Ruby >= 3.2 + fastlane を検証
-  ├── fastlane 設定を生成 (Fastfile, Appfile)
-  ├── 署名リポジトリの存在を確認
+  ├── fastlane 設定を生成 (Fastfile, Appfile, Matchfile)
   ├── match で証明書を生成
   ├── GitHub Secrets をプロビジョニング (base64 ASC キー, SSH match キー)
   └── 署名アクセスを検証 (readonly 同期)
 ```
+
+wizard は **冪等**で、`.env.local` に既に値があれば再質問しません。安全に再実行可能。
 
 ### 通常モード (デフォルト)
 

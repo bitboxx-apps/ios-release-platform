@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
 # bootstrap.sh — Primary platform initializer
-# Supports two modes: --init (first run) and normal (subsequent runs)
-# Non-interactive. Fails on error.
+# Supports two modes: --init (first run) and normal (subsequent runs).
+#
+# --init  runs the interactive wizard (auto_provision.sh) first to fill in
+#         .env.local, then proceeds with project generation, match certs,
+#         and GitHub Secrets provisioning. The wizard is idempotent and
+#         becomes silent when .env.local is already populated.
+#
+# Normal mode is non-interactive: validates env, checks GitHub Secrets,
+# and syncs match in readonly mode.
 
 set -euo pipefail
 
@@ -24,11 +31,30 @@ for arg in "$@"; do
         --init) INIT_MODE=true ;;
         --force-secrets) FORCE_SECRETS=true ;;
         --help|-h)
-            echo "Usage: bootstrap.sh [--init] [--force-secrets]"
-            echo ""
-            echo "  --init    First-time initialization (generates Xcode project, creates certs, provisions secrets)"
-            echo "  --force-secrets  Overwrite existing GitHub secrets when provisioning"
-            echo "  (default) Normal mode: validates env, syncs match readonly, verifies readiness"
+            cat <<'HELP'
+Usage: bootstrap.sh [--init] [--force-secrets]
+
+  --init           First-time initialization. Launches an interactive
+                   wizard that prompts for the App Store Connect API key
+                   and Apple Team ID, then auto-creates the match
+                   signing repo, SSH deploy key, MATCH_PASSWORD, certs,
+                   and GitHub Secrets.
+
+  --force-secrets  Overwrite existing GitHub Secrets when provisioning.
+
+  (default)        Normal mode — validates env, syncs match readonly,
+                   verifies that GitHub Secrets exist. Non-interactive.
+
+Manual prerequisites (only required before --init on a fresh repo):
+
+  - Generate an App Store Connect API Key (Admin role) and download .p8
+  - Note your Apple Developer Team ID
+  - Register the Bundle ID in Developer Portal
+  - Create the App record in App Store Connect
+
+The wizard prints these as a checklist with direct links on first run.
+Full walkthrough: README.md → Quick Start
+HELP
             exit 0
             ;;
         *)
@@ -43,6 +69,16 @@ echo " iOS Release Platform — Bootstrap"
 echo " Mode: $(if $INIT_MODE; then echo 'INIT'; else echo 'NORMAL'; fi)"
 echo "============================================"
 echo ""
+
+# ---------- Step 0 (init only): Interactive provision wizard ----------
+# The wizard fills in any missing values in .env.local (ASC creds, Team ID,
+# Bundle ID, match repo, SSH key, MATCH_PASSWORD). It is idempotent — a
+# re-run skips anything already populated.
+
+if $INIT_MODE; then
+    log_step "Running interactive provision wizard"
+    bash "${SCRIPTS_DIR}/auto_provision.sh"
+fi
 
 # ---------- Step 1: Load and validate environment ----------
 

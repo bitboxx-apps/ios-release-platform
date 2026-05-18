@@ -34,93 +34,67 @@ This template treats release infrastructure as a first-class concern — not an 
 
 ## Quick Start
 
-### 1. Create your repository
+### Only one thing you do by hand
 
-Click **"Use this template"** on GitHub to create a new repository.
+Go to [App Store Connect](https://appstoreconnect.apple.com/) and prepare **5 things**:
 
-### 2. Check your environment
+1. **Users and Access → Integrations → App Store Connect API → Team Keys** → `+` → Role: **Admin** → generate
+2. Download `AuthKey_XXXXXXXXXX.p8` (save locally)
+3. Note: **Key ID** (10 chars) and **Issuer ID** (UUID)
+4. **Membership** page → **Team ID** (10 chars)
+5. Developer Portal → register the Bundle ID (Explicit) + App Store Connect → create the App record
 
-```bash
-./release/bootstrap/doctor.sh
-```
-
-```
-[OK] Git: git version 2.43.0
-[OK] GitHub CLI: gh version 2.40.0
-[OK] Ruby: 3.3.0
-[OK] Bundler: 2.5.3
-[OK] fastlane: 2.219.0
-[OK] Xcode: Xcode 15.2
-[OK] All checks passed. Environment is ready.
-```
-
-Doctor validates prerequisites but never installs them.
-
-### 3. Configure
-
-```bash
-cp .env.platform.example .env.platform
-cp .env.app.example      .env.app
-```
-
-**`.env.platform`** — organization-level secrets:
-```
-APPLE_TEAM_ID=A1B2C3D4E5
-MATCH_GIT_URL=git@github.com:your-org/ios-signing.git
-MATCH_PASSWORD=your-encryption-passphrase
-```
-
-**`.env.app`** — your app's identity:
-```
-APP_NAME=MyApp
-APP_DISPLAY_NAME=My App
-APP_BUNDLE_ID=com.company.myapp
-MATCH_TYPE=appstore
-ASC_KEY_ID=XXXXXXXXXX
-ASC_ISSUER_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-ASC_KEY_PATH=~/keys/AuthKey_XXXXXXXXXX.p8
-MATCH_GIT_PRIVATE_KEY_PATH=~/.ssh/match_key
-```
-
-`APP_NAME` is the Xcode identifier (no spaces). `APP_DISPLAY_NAME` is what appears on the iOS home screen (spaces, Japanese, emoji all OK).
-
-### 4. Bootstrap
+### Everything else: one command
 
 ```bash
 ./release/bootstrap/bootstrap.sh --init
 ```
 
-This single command:
+An interactive wizard runs. Paste the 5 values above and pick a couple of options:
 
-1. Validates your configuration against the JSON Schema
-2. **Generates the Xcode project** (`app/MyApp.xcodeproj`) with correct bundle ID, team, display name, and manual signing
-3. Verifies Ruby >= 3.2 and fastlane
-4. Generates fastlane configuration from templates
-5. Configures match and generates signing certificates
-6. Provisions GitHub Secrets (ASC key is base64-encoded, SSH key for match)
+| Prompt | What it asks |
+|---|---|
+| `ASC_KEY_ID` / `ASC_ISSUER_ID` / `ASC_KEY_PATH` | The API key triple |
+| `APPLE_TEAM_ID` | Team ID from Membership page |
+| Bundle ID | **`1) keep` / `2) auto-generate` / `3) manual`** |
+| Match signing repo | **`1) auto-create default name` / `2) existing URL` / `3) auto-create with custom name`** |
 
-### 5. Open and develop
+The wizard then auto-creates everything else:
 
-```bash
-open app/MyApp.xcodeproj
-```
+- **Private signing repo** via `gh repo create` (or reuses existing)
+- **SSH deploy key** + registers public key on the signing repo
+- **MATCH_PASSWORD** via `openssl rand` (or prompts for existing password if the signing repo already has encrypted content)
+- Writes `.env.local`
+- Then bootstrap proceeds to:
+  - Resolve Xcode project (Team ID, Bundle ID, Manual signing)
+  - Run `fastlane match` (generates certs + provisioning profile, pushes to signing repo)
+  - Push all GitHub Secrets via `gh secret set`
+  - Generate Fastfile / Appfile / Matchfile
 
-The project is ready — bundle ID, team, display name, and signing are all configured. Start writing your app.
-
-### 6. Commit and deploy
+### Commit & deploy
 
 ```bash
 git add .env.app app/ release/platform/fastlane/
-git commit -m "Initialize project"
+git commit -m "Initialize release infrastructure"
 git push origin main
 ```
 
-Tag a version to trigger TestFlight deployment:
+The push triggers `.github/workflows/deploy.yml`. After ~6–10 minutes the build lands in TestFlight Processing.
+
+Tagged releases also work:
 
 ```bash
 git tag v1.0.0
 git push origin v1.0.0
 ```
+
+### Environment check (optional)
+
+```bash
+./release/bootstrap/doctor.sh
+```
+
+Doctor validates prerequisites but never installs them.
 
 ---
 
@@ -256,19 +230,27 @@ Provisioned automatically by `bootstrap.sh --init`:
 
 ### Init Mode (`--init`)
 
-Run once per repository:
+Run once per repository (interactive wizard):
 
 ```
 bootstrap.sh --init
+  ├── interactive wizard (auto_provision.sh)
+  │     ├── prompt ASC API key (Key ID / Issuer ID / .p8 path)
+  │     ├── prompt Apple Team ID
+  │     ├── Bundle ID — keep / auto-generate / manual input
+  │     ├── signing repo — auto-create default / use existing URL / auto-create custom name
+  │     ├── SSH deploy key — auto-generated + registered on the signing repo
+  │     └── MATCH_PASSWORD — auto-generated (or prompts for existing if signing repo has content)
   ├── validate env against schema
-  ├── generate Xcode project from templates (app/<APP_NAME>.xcodeproj)
+  ├── generate Xcode project or resolve placeholders in existing pbxproj
   ├── verify Ruby >= 3.2 + fastlane
-  ├── generate fastlane configs (Fastfile, Appfile)
-  ├── verify signing repository exists
+  ├── generate fastlane configs (Fastfile, Appfile, Matchfile)
   ├── run match to generate certificates
   ├── provision GitHub Secrets (base64 ASC key, SSH match key)
   └── verify signing access (readonly sync)
 ```
+
+The wizard is **idempotent** — re-running won't re-prompt for values already in `.env.local`. Safe to interrupt and resume.
 
 ### Normal Mode (default)
 

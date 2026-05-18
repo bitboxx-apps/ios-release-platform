@@ -53,10 +53,14 @@ if [[ -n "${ASC_KEY_ID:-}" && -n "${ASC_ISSUER_ID:-}" && -n "${ASC_KEY_PATH:-}" 
         python3 - "$ASC_KEY_ID" "$ASC_ISSUER_ID" "$ASC_KEY_PATH_EXPANDED" "$API_KEY_JSON_PATH" <<'PY'
 import json, sys
 key_id, issuer_id, key_filepath, out_path = sys.argv[1:5]
+# Spaceship's Token.from_json_file expects the PEM content under "key",
+# not a filepath. Read the .p8 and embed it verbatim.
+with open(key_filepath) as f:
+    pem_content = f.read()
 payload = {
     "key_id": key_id,
     "issuer_id": issuer_id,
-    "key_filepath": key_filepath,
+    "key": pem_content,
     "in_house": False
 }
 with open(out_path, "w") as f:

@@ -40,6 +40,34 @@ if [[ -n "${MATCH_GIT_PRIVATE_KEY_PATH:-}" ]]; then
     fi
 fi
 
+# Build an App Store Connect API key JSON file and pass it to fastlane
+# match. Without this, match falls back to Apple-ID auth (interactive,
+# 2FA, won't work in CI) when it needs to talk to the Developer Portal.
+API_KEY_ARGS=()
+API_KEY_JSON_PATH=""
+if [[ -n "${ASC_KEY_ID:-}" && -n "${ASC_ISSUER_ID:-}" && -n "${ASC_KEY_PATH:-}" ]]; then
+    ASC_KEY_PATH_EXPANDED="${ASC_KEY_PATH/#\~/$HOME}"
+    if [[ -f "$ASC_KEY_PATH_EXPANDED" ]]; then
+        API_KEY_JSON_PATH="$(mktemp -t match_api_key.XXXXXX)"
+        trap '[[ -n "$API_KEY_JSON_PATH" ]] && rm -f "$API_KEY_JSON_PATH"' EXIT
+        python3 - "$ASC_KEY_ID" "$ASC_ISSUER_ID" "$ASC_KEY_PATH_EXPANDED" "$API_KEY_JSON_PATH" <<'PY'
+import json, sys
+key_id, issuer_id, key_filepath, out_path = sys.argv[1:5]
+payload = {
+    "key_id": key_id,
+    "issuer_id": issuer_id,
+    "key_filepath": key_filepath,
+    "in_house": False
+}
+with open(out_path, "w") as f:
+    json.dump(payload, f)
+PY
+        API_KEY_ARGS=(--api_key_path "$API_KEY_JSON_PATH")
+    else
+        log_warn "ASC_KEY_PATH set but file not found: ${ASC_KEY_PATH}"
+    fi
+fi
+
 READONLY="${1:-true}"
 INIT_MODE="${2:-false}"
 
@@ -77,6 +105,9 @@ run_match_command() {
     fi
     if (( ${#GIT_PRIVATE_KEY_ARGS[@]} )); then
         match_cmd+=("${GIT_PRIVATE_KEY_ARGS[@]}")
+    fi
+    if (( ${#API_KEY_ARGS[@]} )); then
+        match_cmd+=("${API_KEY_ARGS[@]}")
     fi
     match_cmd+=(--readonly "$readonly_value")
     "${match_cmd[@]}"

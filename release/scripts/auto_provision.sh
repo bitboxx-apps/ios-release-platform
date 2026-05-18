@@ -374,11 +374,13 @@ echo ""
 CURRENT_SSH_PATH="$(env_local_value MATCH_GIT_PRIVATE_KEY_PATH)"
 SSH_KEY_PATH_FINAL=""
 
+APP_NAME_LOWER="$(echo "$APP_NAME_VAL" | tr '[:upper:]' '[:lower:]')"
+
+# Phase A — resolve the local key file path
 if [[ -n "$CURRENT_SSH_PATH" ]] && [[ -f "${CURRENT_SSH_PATH/#\~/$HOME}" ]]; then
-    log_ok "SSH key already exists: ${CURRENT_SSH_PATH} — skipping"
+    log_ok "SSH key already exists at ${CURRENT_SSH_PATH} — reusing"
     SSH_KEY_PATH_FINAL="$CURRENT_SSH_PATH"
 else
-    APP_NAME_LOWER="$(echo "$APP_NAME_VAL" | tr '[:upper:]' '[:lower:]')"
     SSH_KEY_PATH_FINAL="$HOME/.ssh/match_${APP_NAME_LOWER}_ed25519"
     if [[ -f "$SSH_KEY_PATH_FINAL" ]]; then
         log_ok "SSH key already on disk at ${SSH_KEY_PATH_FINAL} — reusing"
@@ -389,26 +391,31 @@ else
         ssh-keygen -t ed25519 -f "$SSH_KEY_PATH_FINAL" -N "" -C "match-deploy-${APP_NAME_LOWER}" >/dev/null
         log_ok "SSH key generated"
     fi
-
-    if [[ -n "$SIGNING_REPO_FULL" ]]; then
-        DEPLOY_KEY_TITLE="match-ci-${APP_NAME_LOWER}"
-        PUB_KEY_CONTENT="$(cat "${SSH_KEY_PATH_FINAL}.pub")"
-        EXISTING_TITLE="$(gh api "repos/${SIGNING_REPO_FULL}/keys" --jq ".[] | select(.title == \"${DEPLOY_KEY_TITLE}\") | .title" 2>/dev/null || true)"
-        if [[ -n "$EXISTING_TITLE" ]]; then
-            log_ok "Deploy key '${DEPLOY_KEY_TITLE}' already registered on ${SIGNING_REPO_FULL} — skipping"
-        else
-            log_step "Adding deploy key (write access) to ${SIGNING_REPO_FULL}"
-            gh api "repos/${SIGNING_REPO_FULL}/keys" \
-                --method POST \
-                -f title="${DEPLOY_KEY_TITLE}" \
-                -f key="$PUB_KEY_CONTENT" \
-                -F read_only=false >/dev/null
-            log_ok "Deploy key registered as '${DEPLOY_KEY_TITLE}'"
-        fi
-    else
-        log_warn "Custom MATCH_GIT_URL — register $(basename "${SSH_KEY_PATH_FINAL}").pub as a Deploy key on that repo manually."
-    fi
     upsert_env_local MATCH_GIT_PRIVATE_KEY_PATH "$SSH_KEY_PATH_FINAL"
+fi
+
+# Phase B — always ensure the deploy key is registered on the signing
+# repo. Skipping this when only the LOCAL file exists would leave a
+# stale .env.local pointing at a key that the signing repo has never
+# seen (which happens if the user deletes & recreates the signing repo).
+SSH_KEY_LOCAL_PATH="${SSH_KEY_PATH_FINAL/#\~/$HOME}"
+if [[ -n "$SIGNING_REPO_FULL" ]] && [[ -f "${SSH_KEY_LOCAL_PATH}.pub" ]]; then
+    DEPLOY_KEY_TITLE="match-ci-${APP_NAME_LOWER}"
+    PUB_KEY_CONTENT="$(cat "${SSH_KEY_LOCAL_PATH}.pub")"
+    EXISTING_TITLE="$(gh api "repos/${SIGNING_REPO_FULL}/keys" --jq ".[] | select(.title == \"${DEPLOY_KEY_TITLE}\") | .title" 2>/dev/null || true)"
+    if [[ -n "$EXISTING_TITLE" ]]; then
+        log_ok "Deploy key '${DEPLOY_KEY_TITLE}' already registered on ${SIGNING_REPO_FULL}"
+    else
+        log_step "Adding deploy key (write access) to ${SIGNING_REPO_FULL}"
+        gh api "repos/${SIGNING_REPO_FULL}/keys" \
+            --method POST \
+            -f title="${DEPLOY_KEY_TITLE}" \
+            -f key="$PUB_KEY_CONTENT" \
+            -F read_only=false >/dev/null
+        log_ok "Deploy key registered as '${DEPLOY_KEY_TITLE}'"
+    fi
+elif [[ -z "$SIGNING_REPO_FULL" ]]; then
+    log_warn "Custom MATCH_GIT_URL — register $(basename "${SSH_KEY_PATH_FINAL}").pub as a Deploy key on that repo manually."
 fi
 
 # ─── Step 6: Match encryption password ────────────────────

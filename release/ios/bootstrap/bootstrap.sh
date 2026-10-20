@@ -13,8 +13,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-SCRIPTS_DIR="${REPO_ROOT}/release/scripts"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+SCRIPTS_DIR="${REPO_ROOT}/release/ios/scripts"
 
 source "${SCRIPTS_DIR}/ensure_idempotency.sh"
 
@@ -108,8 +108,8 @@ bash "${SCRIPTS_DIR}/setup_fastlane.sh"
 
 log_step "Ensuring fastlane configuration exists"
 
-FASTLANE_DIR="${REPO_ROOT}/release/platform/fastlane"
-FL_TEMPLATE_DIR="${REPO_ROOT}/release/platform/templates"
+FASTLANE_DIR="${REPO_ROOT}/release/ios/platform/fastlane"
+FL_TEMPLATE_DIR="${REPO_ROOT}/release/ios/platform/templates"
 
 generate_from_template() {
     local target="$1"
@@ -200,14 +200,14 @@ echo ""
 echo "============================================"
 log_ok "Bootstrap complete"
 echo ""
-echo "  App project:  ${REPO_ROOT}/app/${APP_NAME}.xcodeproj"
+echo "  App project:  ${REPO_ROOT}/apps/ios/${APP_NAME}.xcodeproj"
 echo "  Fastlane dir: ${FASTLANE_DIR}"
 echo "  Mode:         $(if $INIT_MODE; then echo 'INIT'; else echo 'NORMAL'; fi)"
 echo ""
 echo "  Open your project:"
-echo "    open app/${APP_NAME}.xcodeproj"
+echo "    open apps/ios/${APP_NAME}.xcodeproj"
 echo ""
 echo "  Local deploy (CI 相当ビルド & TestFlight アップロード):"
-echo "    ./release/scripts/deploy.sh            # beta lane"
-echo "    ./release/scripts/deploy.sh release    # App Store lane"
+echo "    ./release/ios/scripts/deploy.sh            # beta lane"
+echo "    ./release/ios/scripts/deploy.sh release    # App Store lane"
 echo "============================================"

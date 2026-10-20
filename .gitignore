@@ -29,10 +29,10 @@ vendor/bundle/
 Gemfile.lock
 
 # Fastlane
-release/platform/fastlane/report.xml
-release/platform/fastlane/README.md
-release/platform/fastlane/screenshots/
-release/platform/fastlane/test_output/
+release/ios/platform/fastlane/report.xml
+release/ios/platform/fastlane/README.md
+release/ios/platform/fastlane/screenshots/
+release/ios/platform/fastlane/test_output/
 
 # Build artifacts
 build/

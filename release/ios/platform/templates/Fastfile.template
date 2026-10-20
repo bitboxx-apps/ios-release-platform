@@ -95,13 +95,13 @@ end
 
 def project_path_for_ci
   path = (ENV["XCODE_PROJECT_PATH"] || "").strip
-  return "../../app/__APP_NAME__.xcodeproj" if path.empty?
+  return "../../../apps/ios/__APP_NAME__.xcodeproj" if path.empty?
   return path if path.start_with?("/")
   workspace = (ENV["GITHUB_WORKSPACE"] || "").strip
   if !workspace.empty?
     return File.join(workspace, path)
   end
-  File.expand_path(File.join("..", "..", path), __dir__)
+  File.expand_path(File.join("..", "..", "..", "..", path), __dir__)
 end
 
 def export_options_for_match

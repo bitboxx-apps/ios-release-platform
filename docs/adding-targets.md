@@ -55,7 +55,7 @@ export_options: {
 If you added new bundle IDs that require separate provisioning, re-run:
 
 ```bash
-./release/bootstrap/bootstrap.sh --init
+./release/ios/bootstrap/bootstrap.sh --init
 ```
 
 Or manually update the `APP_BUNDLE_ID` secret to include all identifiers.

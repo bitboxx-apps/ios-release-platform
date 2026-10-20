@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# release/scripts/deploy.sh — ローカルで CI 相当の fastlane ビルド・デプロイを実行する
+# release/ios/scripts/deploy.sh — ローカルで CI 相当の fastlane ビルド・デプロイを実行する
 #
 # Usage:
-#   ./release/scripts/deploy.sh [--run-number N] [beta|release|test]
+#   ./release/ios/scripts/deploy.sh [--run-number N] [beta|release|test]
 #
 # 環境変数は .env.platform → .env.app → .env.local の順で読み込み、
 # 後から読んだファイルが優先（GitHub Actions の Secrets 相当はここで補完）。
@@ -14,8 +14,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# release/scripts/ から見たアプリのルート（= リポジトリのルート）
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# release/ios/scripts/ から見たアプリのルート（= リポジトリのルート）
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
 # ── ヘルプ ────────────────────────────────────────────────────────────────────
 usage() {
@@ -35,9 +35,9 @@ Lanes:
   test     テストのみ実行
 
 Examples:
-  ./release/scripts/deploy.sh
-  ./release/scripts/deploy.sh --run-number 200
-  ./release/scripts/deploy.sh release
+  ./release/ios/scripts/deploy.sh
+  ./release/ios/scripts/deploy.sh --run-number 200
+  ./release/ios/scripts/deploy.sh release
 EOF
 }
 
@@ -96,7 +96,7 @@ fi
 export APP_SCHEME="$APP_NAME"
 # 絶対パスで渡す: Fastfile の project_path_for_ci は start_with?("/") で早期 return するため
 # GITHUB_WORKSPACE 未設定時の相対パス誤計算を回避できる
-export XCODE_PROJECT_PATH="$REPO_ROOT/app/${APP_NAME}.xcodeproj"
+export XCODE_PROJECT_PATH="$REPO_ROOT/apps/ios/${APP_NAME}.xcodeproj"
 
 # ASC キー: ローカルでは .p8 ファイルパスを直接 ASC_KEY_PATH_CI に渡す
 # Fastfile は ASC_KEY_PATH_CI → ASC_KEY_CONTENT の順で試みるため、
@@ -141,6 +141,6 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 
 # ── fastlane 実行 ─────────────────────────────────────────────────────────────
-cd "$REPO_ROOT/release/platform"
+cd "$REPO_ROOT/release/ios/platform"
 bundle install --quiet
 bundle exec fastlane "$LANE"

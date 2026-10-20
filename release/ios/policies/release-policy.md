@@ -18,7 +18,7 @@
 |-------------|---------|-------------|
 | Development | Push to feature branch | None |
 | Beta | Push to main / manual | TestFlight |
-| Production | Git tag `v*` | App Store |
+| Production | Git tag `v*` / `ios/v*` | App Store |
 
 ## Failure Handling
 

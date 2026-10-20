@@ -21,7 +21,7 @@ iOS アプリを App Store に出すには、Xcode の署名設定、証明書�
 - GitHub Actions によるビルド、署名、TestFlight デプロイ
 - 1つの bootstrap コマンドですべてをプロビジョニング
 - JSON Schema によるレイヤー型の環境設定バリデーション
-- プロダクトコード (`app/`) とインフラ (`release/`) の明確な分離
+- プロダクトコード (`apps/ios/`) とインフラ (`release/`) の明確な分離
 
 **やらないこと:**
 
@@ -47,7 +47,7 @@ iOS アプリを App Store に出すには、Xcode の署名設定、証明書�
 ### 残り全部はワンコマンド
 
 ```bash
-./release/bootstrap/bootstrap.sh --init
+./release/ios/bootstrap/bootstrap.sh --init
 ```
 
 対話 wizard が立ち上がるので、上の 4 値を入力するだけ。
@@ -74,12 +74,12 @@ wizard が以下を自動で行います:
 ### コミット & デプロイ
 
 ```bash
-git add .env.app app/ release/platform/fastlane/
+git add .env.app apps/ios/ release/ios/platform/fastlane/
 git commit -m "Initialize release infrastructure"
 git push origin main
 ```
 
-push と同時に `.github/workflows/deploy.yml` が走り、約 6〜10 分で TestFlight の Processing 状態まで自動で進みます。
+push と同時に `.github/workflows/ios-deploy.yml` が走り、約 6〜10 分で TestFlight の Processing 状態まで自動で進みます。
 
 `v*` タグでも別途デプロイをキックできます:
 
@@ -91,7 +91,7 @@ git push origin v1.0.0
 ### 環境チェック(任意)
 
 ```bash
-./release/bootstrap/doctor.sh
+./release/ios/bootstrap/doctor.sh
 ```
 
 Doctor は前提条件を検証しますが、インストールは行いません。
@@ -102,36 +102,38 @@ Doctor は前提条件を検証しますが、インストールは行いませ�
 
 ```
 .
-├── app/                              # プロダクトコード — bootstrap で生成
-│   ├── <APP_NAME>.xcodeproj/         #   Xcode プロジェクト（手動署名、正しいチーム/バンドルID）
-│   └── <APP_NAME>/                   #   Swift ソース、アセット
+├── apps/                             # プロダクトコード（プラットフォームごとに 1 ディレクトリ）
+│   └── ios/                          # プロダクトコード — bootstrap で生成
+│       ├── <APP_NAME>.xcodeproj/     #   Xcode プロジェクト（手動署名、正しいチーム/バンドルID）
+│       └── <APP_NAME>/               #   Swift ソース、アセット
 │
-├── release/                          # リリースインフラ — app/ には触れない
-│   ├── bootstrap/
-│   │   ├── doctor.sh                 #   環境バリデーター
-│   │   ├── bootstrap.sh              #   プライマリイニシャライザ (macOS)
-│   │   └── bootstrap.ps1             #   シークレットプロビジョニング (Windows)
-│   ├── scripts/
-│   │   ├── create_project.sh         #   テンプレートから Xcode プロジェクト生成
-│   │   ├── ensure_idempotency.sh     #   共有ヘルパー（ログ、env、チェック）
-│   │   ├── setup_ruby.sh             #   Ruby バージョン検証
-│   │   ├── setup_fastlane.sh         #   fastlane の条件付きインストール
-│   │   ├── setup_match.sh            #   証明書同期（readonly/init）
-│   │   └── setup_secrets.sh          #   GitHub Secrets プロビジョニング
-│   ├── platform/
-│   │   ├── fastlane/                 #   生成された fastlane 設定
-│   │   ├── templates/                #   Fastfile, Appfile, Matchfile, Xcode テンプレート
-│   │   ├── signing/                  #   署名成果物
-│   │   └── Gemfile                   #   Ruby 依存関係
-│   ├── policies/
-│   │   ├── signing-policy.md         #   証明書ガバナンスルール
-│   │   └── release-policy.md         #   リリースパイプラインルール
-│   └── config/
-│       └── env.schema.json           #   環境バリデーションスキーマ
+├── release/                          # リリースインフラ — apps/ には触れない
+│   └── ios/                          #   iOS 用リリース基盤（bootstrap / fastlane / match）
+│       ├── bootstrap/
+│       │   ├── doctor.sh             #   環境バリデーター
+│       │   ├── bootstrap.sh          #   プライマリイニシャライザ (macOS)
+│       │   └── bootstrap.ps1         #   シークレットプロビジョニング (Windows)
+│       ├── scripts/
+│       │   ├── create_project.sh     #   テンプレートから Xcode プロジェクト生成
+│       │   ├── ensure_idempotency.sh #   共有ヘルパー（ログ、env、チェック）
+│       │   ├── setup_ruby.sh         #   Ruby バージョン検証
+│       │   ├── setup_fastlane.sh     #   fastlane の条件付きインストール
+│       │   ├── setup_match.sh        #   証明書同期（readonly/init）
+│       │   └── setup_secrets.sh      #   GitHub Secrets プロビジョニング
+│       ├── platform/
+│       │   ├── fastlane/             #   生成された fastlane 設定
+│       │   ├── templates/            #   Fastfile, Appfile, Matchfile, Xcode テンプレート
+│       │   ├── signing/              #   署名成果物
+│       │   └── Gemfile               #   Ruby 依存関係
+│       ├── policies/
+│       │   ├── signing-policy.md     #   証明書ガバナンスルール
+│       │   └── release-policy.md     #   リリースパイプラインルール
+│       └── config/
+│           └── env.schema.json       #   環境バリデーションスキーマ
 │
 ├── .github/workflows/
-│   ├── ci.yml                        #   push/PR 時のビルド & テスト（署名なし）
-│   └── deploy.yml                    #   v* タグで署名ビルド & TestFlight
+│   ├── ios-ci.yml                    #   push/PR 時のビルド & テスト（署名なし）
+│   └── ios-deploy.yml                #   v* タグで署名ビルド & TestFlight
 │
 ├── docs/                             #   ドキュメント
 ├── .env.platform.example             #   組織レベル設定テンプレート
@@ -143,11 +145,11 @@ Doctor は前提条件を検証しますが、インストールは行いませ�
 
 | ディレクトリ | 内容 | 依存先 |
 |-------------|------|--------|
-| `app/` | プロダクトコード、Xcode プロジェクト、アセット | `app/` 外には依存しない |
-| `release/` | 署名、fastlane、bootstrap、CI ロジック | 環境変数のみ |
+| `apps/ios/` | プロダクトコード、Xcode プロジェクト、アセット | `apps/ios/` 外には依存しない |
+| `release/<platform>/` | 署名、fastlane、bootstrap、CI ロジック | 環境変数のみ |
 | `.github/` | ワークフロー定義 | `release/` スクリプト、`.env.app`、シークレット |
 
-fastlane、署名、CI、bootstrap のロジックは **絶対に** `app/` 内に置きません。
+fastlane、署名、CI、bootstrap のロジックは **絶対に** `apps/ios/` 内に置きません。
 
 ---
 
@@ -191,11 +193,13 @@ fastlane、署名、CI、bootstrap のロジックは **絶対に** `app/` 内�
 
 ## CI/CD
 
-### CI — プッシュ & PR ごと (`ci.yml`)
+### CI — プッシュ & PR ごと (`ios-ci.yml`)
 
 署名なしでビルド & テスト。誰でもビルドが通ることを確認できます。
 
-### Deploy — バージョンタグ (`deploy.yml`)
+bootstrap 前（`.env.app` に `APP_NAME` が無い）は、軽量な Linux の preflight ジョブで判定して macOS ビルドを **失敗ではなく skip** します。`.env.app` をコミットすると自動で有効になります。手動実行（`workflow_dispatch`）も可能です。
+
+### Deploy — バージョンタグ (`ios-deploy.yml`)
 
 ```bash
 git tag v1.2.0
@@ -288,7 +292,7 @@ bootstrap.sh
 
 ### 証明書の安全性
 
-破壊的な操作 (`match nuke`、証明書削除、キーローテーション) は**自動では絶対に実行されません**。`release/policies/signing-policy.md` を参照してください。
+破壊的な操作 (`match nuke`、証明書削除、キーローテーション) は**自動では絶対に実行されません**。`release/ios/policies/signing-policy.md` を参照してください。
 
 ---
 
@@ -297,7 +301,7 @@ bootstrap.sh
 Windows は**シークレットのプロビジョニングと設定のみ**に対応:
 
 ```powershell
-.\release\bootstrap\bootstrap.ps1 -Init
+.\release\ios\bootstrap\bootstrap.ps1 -Init
 ```
 
 iOS のビルド操作には macOS が必要です。

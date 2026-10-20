@@ -103,7 +103,7 @@ load_env_layers() {
 
 validate_env_schema() {
     local root_dir="$1"
-    local schema_file="${root_dir}/release/config/env.schema.json"
+    local schema_file="${root_dir}/release/ios/config/env.schema.json"
 
     if ! file_exists "$schema_file"; then
         log_fail "Schema file not found: ${schema_file}"
@@ -146,7 +146,7 @@ for var in schema.get('required', []):
 derive_app_vars() {
     if [[ -n "${APP_NAME:-}" ]]; then
         export APP_SCHEME="${APP_SCHEME:-${APP_NAME}}"
-        export XCODE_PROJECT_PATH="${XCODE_PROJECT_PATH:-app/${APP_NAME}.xcodeproj}"
+        export XCODE_PROJECT_PATH="${XCODE_PROJECT_PATH:-apps/ios/${APP_NAME}.xcodeproj}"
     fi
 }
 

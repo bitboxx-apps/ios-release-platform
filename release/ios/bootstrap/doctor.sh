@@ -5,8 +5,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-source "${REPO_ROOT}/release/scripts/ensure_idempotency.sh"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+source "${REPO_ROOT}/release/ios/scripts/ensure_idempotency.sh"
 
 echo "============================================"
 echo " iOS Release Platform — Environment Doctor"

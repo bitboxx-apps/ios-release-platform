@@ -9,7 +9,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$RepoRoot = (Resolve-Path "$PSScriptRoot\..\..").Path
+$RepoRoot = (Resolve-Path "$PSScriptRoot\..\..\..").Path
 
 # ---------- Logging ----------
 
@@ -88,7 +88,7 @@ if ($appName -and -not [System.Environment]::GetEnvironmentVariable("APP_SCHEME"
     [System.Environment]::SetEnvironmentVariable("APP_SCHEME", $appName, "Process")
 }
 if ($appName -and -not [System.Environment]::GetEnvironmentVariable("XCODE_PROJECT_PATH", "Process")) {
-    [System.Environment]::SetEnvironmentVariable("XCODE_PROJECT_PATH", "app/$appName.xcodeproj", "Process")
+    [System.Environment]::SetEnvironmentVariable("XCODE_PROJECT_PATH", "apps/ios/$appName.xcodeproj", "Process")
 }
 
 if ($Init) {

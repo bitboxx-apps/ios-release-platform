@@ -16,8 +16,8 @@ fi
 
 log_info "fastlane not found — installing via bundler"
 
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-GEMFILE_PATH="${REPO_ROOT}/release/platform/Gemfile"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+GEMFILE_PATH="${REPO_ROOT}/release/ios/platform/Gemfile"
 
 if file_exists "$GEMFILE_PATH"; then
     log_info "Installing from Gemfile: ${GEMFILE_PATH}"

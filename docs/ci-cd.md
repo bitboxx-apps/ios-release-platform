@@ -2,16 +2,18 @@
 
 ## Workflows
 
-### CI (`ci.yml`)
+### CI (`ios-ci.yml`)
 
-Triggered on every push to `main` and on pull requests.
+Triggered on push to `main` / pull requests touching `apps/ios/**`, `release/ios/**`, `.env.app`, or the workflow itself, and manually via `workflow_dispatch`.
+
+- A `preflight` job (ubuntu, seconds) checks `.env.app` for `APP_NAME`; before bootstrap the macOS build is **skipped**, not failed
 
 - Reads `APP_NAME` from committed `.env.app`
 - Builds the project without signing (simulator)
 - Runs tests
 - SPM dependency caching enabled
 
-### Deploy (`deploy.yml`)
+### Deploy (`ios-deploy.yml`)
 
 Triggered when a version tag (`v*`) is pushed, or manually via `workflow_dispatch`.
 

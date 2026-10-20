@@ -9,8 +9,8 @@ source "${SCRIPT_DIR}/ensure_idempotency.sh"
 
 require_macos
 
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-FASTLANE_DIR="${REPO_ROOT}/release/platform/fastlane"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+FASTLANE_DIR="${REPO_ROOT}/release/ios/platform/fastlane"
 
 # Load environment
 load_env_layers "$REPO_ROOT"

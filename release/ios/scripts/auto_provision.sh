@@ -15,7 +15,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=ensure_idempotency.sh
 source "${SCRIPT_DIR}/ensure_idempotency.sh"
 
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 ENV_LOCAL="${REPO_ROOT}/.env.local"
 ENV_APP="${REPO_ROOT}/.env.app"
 

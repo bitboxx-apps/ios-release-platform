@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 # create_project.sh — Generate Xcode project from templates
 # Replaces __PLACEHOLDER__ markers with values from .env files.
-# Idempotent: skips if app/*.xcodeproj already exists.
+# Idempotent: skips if apps/ios/*.xcodeproj already exists.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 source "${SCRIPT_DIR}/ensure_idempotency.sh"
 
-TEMPLATE_DIR="${REPO_ROOT}/release/platform/templates/app"
-APP_DIR="${REPO_ROOT}/app"
+TEMPLATE_DIR="${REPO_ROOT}/release/ios/platform/templates/app"
+APP_DIR="${REPO_ROOT}/apps/ios"
 
 # ---------- Load and validate environment ----------
 

@@ -1,18 +1,56 @@
-name: CI
+name: iOS CI
 
 on:
   push:
     branches: [main]
+    paths:
+      - 'apps/ios/**'
+      - 'release/ios/**'
+      - '.env.app'
+      - '.github/workflows/ios-ci.yml'
   pull_request:
     branches: [main]
+    paths:
+      - 'apps/ios/**'
+      - 'release/ios/**'
+      - '.env.app'
+      - '.github/workflows/ios-ci.yml'
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  # bootstrap 前（.env.app に APP_NAME が無い）は macOS ビルドを失敗ではなく skip にする。
+  # 判定は数秒の Linux ジョブのみで、macOS ランナーは起動しない。
+  preflight:
+    name: Check bootstrap status
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - name: Checkout (.env.app only)
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: .env.app
+          sparse-checkout-cone-mode: false
+
+      - name: Check .env.app
+        id: check
+        run: |
+          if [ -f .env.app ] && grep -Eq '^[[:space:]]*APP_NAME=[^[:space:]]+' .env.app; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=iOS CI skipped::.env.app (APP_NAME) が無いため skip。./release/ios/bootstrap/bootstrap.sh --init を実行して .env.app をコミットすると CI が有効になります。"
+          fi
+
   build:
     name: Build & Test
+    needs: preflight
+    if: needs.preflight.outputs.ready == 'true'
     runs-on: macos-15
     timeout-minutes: 30
 
@@ -38,7 +76,7 @@ jobs:
           fi
           # Derive values
           echo "APP_SCHEME=${APP_NAME}" >> "$GITHUB_ENV"
-          echo "XCODE_PROJECT_PATH=app/${APP_NAME}.xcodeproj" >> "$GITHUB_ENV"
+          echo "XCODE_PROJECT_PATH=apps/ios/${APP_NAME}.xcodeproj" >> "$GITHUB_ENV"
 
       - name: Set up Xcode
         uses: maxim-lobanov/setup-xcode@v1

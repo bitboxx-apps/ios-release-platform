@@ -1,9 +1,10 @@
-name: Deploy to TestFlight
+name: iOS Deploy to TestFlight
 
 on:
   push:
     tags:
-      - 'v*'
+      - 'v*'      # legacy / iOS-only repos
+      - 'ios/v*'  # multi-platform: ios/v1.2.0
   workflow_dispatch:
 
 jobs:
@@ -35,7 +36,7 @@ jobs:
             exit 1
           fi
           echo "APP_SCHEME=${APP_NAME}" >> "$GITHUB_ENV"
-          echo "XCODE_PROJECT_PATH=app/${APP_NAME}.xcodeproj" >> "$GITHUB_ENV"
+          echo "XCODE_PROJECT_PATH=apps/ios/${APP_NAME}.xcodeproj" >> "$GITHUB_ENV"
 
       - name: Resolve ASC env (secrets override .env.app)
         env:
@@ -73,7 +74,7 @@ jobs:
         with:
           ruby-version: '3.3'
           bundler-cache: true
-          working-directory: release/platform
+          working-directory: release/ios/platform
 
       - name: SPM cache
         uses: actions/cache@v4
@@ -102,7 +103,7 @@ jobs:
           asc_key_path="$RUNNER_TEMP/asc_key.p8"
           echo "ASC_KEY_PATH_CI=$asc_key_path" >> "$GITHUB_ENV"
           export ASC_KEY_PATH_CI="$asc_key_path"
-          python3 release/scripts/asc_key_prepare.py
+          python3 release/ios/scripts/asc_key_prepare.py
           openssl pkey -in "$asc_key_path" -pubout 2>/dev/null | openssl sha256
 
       - name: ASC key debug (safe)
@@ -123,7 +124,7 @@ jobs:
           MATCH_GIT_PRIVATE_KEY: ${{ secrets.MATCH_GIT_PRIVATE_KEY }}
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        working-directory: release/platform
+        working-directory: release/ios/platform
         run: bundle exec fastlane beta
 
       - name: Dump gym/xcode logs on failure

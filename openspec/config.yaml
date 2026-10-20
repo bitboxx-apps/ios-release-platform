@@ -1,0 +1,18 @@
+schema: spec-driven
+
+# エージェントが読むだけでは分からない前提だけを書く（詳しくは AGENTS.md を参照）
+context: |
+  - 成果物（proposal / design / tasks / spec）は日本語で書く。要件のキーワード（SHALL / MUST）と WHEN / THEN は英語のままにする。
+  - モノレポ構成: プロダクトコードは apps/<platform>/、リリース基盤は release/<platform>/、共有物は packages/、バックエンドは services/。
+  - release/ は .env から生成する設計。生成物（fastlane/Fastfile など）ではなく templates/ を直す。
+  - リリース基盤のスクリプトは冪等・非対話・Fail-Fast にする。証明書の破壊的な操作は自動化しない。
+  - 秘密情報（.env.platform, .env.local, *.p8, *.p12, 鍵）は成果物に書かない。
+  - iOS のビルドと署名は macOS + Xcode 15+ が必要。CI は GitHub Actions (macos-15)。
+
+rules:
+  proposal:
+    - Impact に影響するプラットフォーム（ios / web / android / shared）を明記する
+    - ディレクトリ構成、CI/CD、署名に関わる変更は BREAKING かどうかと移行手順を書く
+  tasks:
+    - パスを変える場合は git grep で古いパスが残っていないか確認するタスクを入れる
+    - 環境変数を変える場合は env.schema.json と .env.*.example を更新するタスクを入れる

@@ -11,7 +11,7 @@
 Run the doctor to verify your environment:
 
 ```bash
-./release/bootstrap/doctor.sh
+./release/ios/bootstrap/doctor.sh
 ```
 
 ## Quick Start
@@ -45,7 +45,7 @@ Edit `.env.app` with your app identity:
 ### 3. Run bootstrap
 
 ```bash
-CI=1 FASTLANE_SKIP_UPDATE_CHECK=1 ./release/bootstrap/bootstrap.sh --init
+CI=1 FASTLANE_SKIP_UPDATE_CHECK=1 ./release/ios/bootstrap/bootstrap.sh --init
 ```
 
 This will:
@@ -60,7 +60,7 @@ This will:
 ### 4. Open and develop
 
 ```bash
-open app/<APP_NAME>.xcodeproj
+open apps/ios/<APP_NAME>.xcodeproj
 ```
 
 ### 5. Subsequent runs
@@ -68,7 +68,7 @@ open app/<APP_NAME>.xcodeproj
 After initial setup, use normal mode:
 
 ```bash
-./release/bootstrap/bootstrap.sh
+./release/ios/bootstrap/bootstrap.sh
 ```
 
 ## Windows Users
@@ -89,7 +89,7 @@ iOS build operations require macOS.
 
 - `No code signing identity found and cannot create a new one because you enabled readonly`:
   - You are running match in readonly mode before any certificates exist.
-  - Run `./release/bootstrap/bootstrap.sh --init` (or `release/scripts/setup_match.sh false true`) once to generate them.
+  - Run `./release/ios/bootstrap/bootstrap.sh --init` (or `release/ios/scripts/setup_match.sh false true`) once to generate them.
 
 - `Access forbidden` from the Apple Developer Portal:
   - Confirm your Apple Developer Program role has access to Certificates/Identifiers/Profiles.

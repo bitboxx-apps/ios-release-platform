@@ -1,7 +1,7 @@
 # AGENTS.md
 
 このリポジトリで作業する AI エージェント（Claude Code / Codex / Cursor など）と人間の開発者向けのガイドです。
-**作業を始める前に必ず読んでください。** 詳細な背景は `README_ja.md` と `docs/` にあります。
+**作業を始める前に必ず読んでください。** 詳細な背景は `README_ja.md` と `docs/`（入口は `docs/00_ホーム/ホーム.md`）にあります。
 
 ---
 
@@ -20,7 +20,7 @@
 ```
 .
 ├── AGENTS.md                 # このファイル（CLAUDE.md からも参照）
-├── openspec/                 # 仕様の正（Source of Truth）。実装より先に更新する
+├── openspec -> docs/openspec # 仕様の正（Source of Truth）。実装より先に更新する（実体は docs/openspec/）
 │   ├── config.yaml           #   OpenSpec 設定（プロジェクトの前提・成果物ルール）
 │   ├── specs/<capability>/   #   現在の仕様（合意済み・実装済み）
 │   └── changes/<change-id>/  #   変更提案（proposal / tasks / design / spec delta）
@@ -41,7 +41,17 @@
 │   ├── ios-ci.yml            #   iOS: 署名なしビルド & テスト（paths フィルタ付き。bootstrap 前は skip）
 │   └── ios-deploy.yml        #   iOS: 署名ビルド & TestFlight（タグ `v*` / `ios/v*`）
 │
-├── docs/                     # 人間向けドキュメント
+├── docs/                     # 人間向けドキュメント（Obsidian の Vault として開ける。リンクは [[...]]）
+│   ├── 00_ホーム/            #   入口
+│   ├── 10_全体像/            #   システム構成、環境変数の層、リリースの流れ
+│   ├── 20_ドメイン知識/      #   アプリの概念とふるまい
+│   ├── 30_機能の地図/        #   機能 → OpenSpec の change → コード
+│   ├── 40_運用/              #   セットアップ・CI/CD・ローカル開発
+│   ├── 50_事故と教訓/        #   起きた問題・原因・対処・再発防止
+│   ├── 60_用語集/
+│   ├── 90_テンプレート/      #   新しいノートのひな形
+│   ├── .obsidian/            #   Vault の共有設定（個人の状態は git-ignored）
+│   └── openspec/             #   仕様の実体（直下の openspec はここへのリンク）
 └── .env.*.example            # 環境変数テンプレート（3 層構成）
 ```
 
@@ -191,7 +201,7 @@
 - [ ] パスを変えたら `git grep` で古いパスが残っていないことを確認した
 - [ ] 環境変数を変えたら `env.schema.json` と `.env.*.example` も更新した
 - [ ] iOS: `ios-ci.yml` が通る（ローカルなら `xcodebuild build` を署名なしで実行）
-- [ ] README / README_ja / docs / この AGENTS.md の、関係する部分を更新した
+- [ ] README / README_ja / docs / この AGENTS.md の、関係する部分を更新した（機能を足したら `docs/30_機能の地図`、再発しそうな問題が起きたら `docs/50_事故と教訓` にも書く）
 - [ ] 秘密情報が差分に入っていない
 
 ---
@@ -202,7 +212,8 @@
 - **Ruby (Fastfile)**: ENV の値は `sanitize_env_scalar` を通してから使う。秘密情報を `UI.message` などで出力しない。
 - **Swift (apps/ios)**: SwiftUI を使う。`APP_NAME` は Swift の識別子なので、ハードコードせずに生成された名前に従う。
 - **コミット**: 1 コミット 1 目的。OpenSpec の change に関するコミットは、本文に `<change-id>` を書く。
-- **ドキュメントの言語**: README は日英の 2 つを同期させる。AGENTS.md と openspec は日本語でよい。
+- **ドキュメントの言語**: README は日英の 2 つを同期させる。AGENTS.md・openspec・`docs/` の新しいノートは日本語でよい。
+- **ドキュメントの書き方**: `docs/` のノートは `90_テンプレート` のひな形から作り、リンクは `[[...]]` で書く。仕様を書き写さずにリンクし、確認できた事実だけを書く（推測は「推測」と書く）。
 
 ---
 

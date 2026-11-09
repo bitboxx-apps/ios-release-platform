@@ -135,7 +135,9 @@ Doctor は前提条件を検証しますが、インストールは行いませ�
 │   ├── ios-ci.yml                    #   push/PR 時のビルド & テスト（署名なし）
 │   └── ios-deploy.yml                #   v* タグで署名ビルド & TestFlight
 │
-├── docs/                             #   ドキュメント
+├── docs/                             #   ドキュメント（Obsidian の Vault。入口は docs/00_ホーム/ホーム.md）
+│   ├── 00_ホーム/ … 90_テンプレート/  #   番号付きのフォルダー（全体像・ドメイン知識・機能の地図・運用・事故と教訓・用語集・ひな形）
+│   └── openspec/                     #   仕様の実体（直下の openspec はここへのシンボリックリンク。Windows で core.symlinks=false のときは docs/openspec/ を直接使う）
 ├── .env.platform.example             #   組織レベル設定テンプレート
 ├── .env.app.example                  #   アプリ固有設定テンプレート（コミット対象）
 └── .env.local.example                #   開発者オーバーライドテンプレート（git-ignored）

@@ -135,7 +135,9 @@ Doctor validates prerequisites but never installs them.
 │   ├── ios-ci.yml                    #   Build & test on push/PR (no signing)
 │   └── ios-deploy.yml                #   Signed build & TestFlight on v* tag
 │
-├── docs/                             #   Documentation
+├── docs/                             #   Documentation (an Obsidian vault; start at docs/00_ホーム/ホーム.md)
+│   ├── 00_ホーム/ … 90_テンプレート/  #   Numbered folders (overview, domain, feature map, operations, incidents, glossary, templates)
+│   └── openspec/                     #   The specs (the root openspec is a symlink to here; on Windows with core.symlinks=false use docs/openspec/ directly)
 ├── .env.platform.example             #   Organization-level config template
 ├── .env.app.example                  #   App-specific config template (committed)
 └── .env.local.example                #   Developer override template (git-ignored)
